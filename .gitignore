@@ -6,3 +6,5 @@ site/
 *.pyc
 Pipfile.lock
 .DS_Store
+mkdocs-material-key.scm
+.env
