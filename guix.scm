@@ -1,6 +1,6 @@
 (use-modules
  ((guix licenses) #:prefix license:)
- (mkdocs-material)
+ (mkdocs-material-key)
  (guix download)
  (guix profiles)
  (guix packages)

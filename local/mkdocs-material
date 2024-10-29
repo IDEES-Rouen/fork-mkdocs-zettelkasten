@@ -1,0 +1,807 @@
+(define-module (mkdocs-material-key)
+  #:use-module (guix packages)
+  #:use-module (guix download)
+  #:use-module (guix profiles)
+  #:use-module (gnu packages python-build)
+  #:use-module (gnu packages python-web)
+  #:use-module (gnu packages python-check)
+  #:use-module (gnu packages check)
+  #:use-module (guix build-system python)
+  #:use-module (guix build-system pyproject)
+  #:use-module (guix licenses)
+  #:use-module (guix gexp)
+  #:use-module (gnu packages version-control)
+  #:use-module (gnu packages python-xyz)
+  #:use-module (guix git-download)
+  #:use-module (gnu packages time)
+  #:use-module (gnu packages haskell-xyz)
+  #:use-module (gnu packages textutils)
+  #:use-module (gnu packages tex)
+  #:export (python-mkdocs-1-6-1
+            python-markdown-3-5-2
+            python-mkdocs-material
+            python-mkdocs-git-revision-date-localized-plugin
+            python-mkdocs-bibtex )
+  )
+
+(define-public python-pypandoc
+  (package
+   (name "python-pypandoc")
+   (version "1.7.5")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "pypandoc" version))
+     (sha256
+      (base32
+       "0l6a8ngzpx363q2jskxxkx6psfhqrvc4js80dmn16r3vw6m2cb40"))))
+   (build-system python-build-system)
+   (inputs
+    (list pandoc python-pandocfilters))
+   (propagated-inputs
+    `(("wheel" ,python-wheel)))
+   (native-inputs
+    `(("texlive" ,(texlive-updmap.cfg (list texlive-lm texlive-xcolor)))))
+   (arguments
+    `(#:tests? #f
+      #:phases
+      (modify-phases %standard-phases
+                     (add-before 'check 'disable-tests
+                                 (lambda _
+                                   ;; Disable test requiring network access
+                                   (substitute* "tests.py"
+                                                (("test_basic_conversion_from_http_url")
+                                                 "skip_test_basic_conversion_from_http_url"))
+                                   #t)))))
+   (home-page "https://github.com/bebraw/pypandoc")
+   (synopsis "Python wrapper for pandoc")
+   (description "pypandoc is a thin Python wrapper around pandoc
+and pandoc-citeproc.")
+   (license #f)))
+
+(define-public python-mkdocs-bibtex
+  (package
+   (name "python-mkdocs-bibtex")
+   (version "2.16.2")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "mkdocs-bibtex" version))
+     (sha256
+      (base32 "039bh7cb06wjqrsqqpbl4km8b5n7klmrazxpxilpfg6bdibb6plr"))))
+   (build-system pyproject-build-system)
+   (arguments
+    (list
+     #:tests? #false  ;there are none
+     #:phases
+     '(modify-phases %standard-phases
+       (add-after 'unpack 'relax-requirements
+                  (lambda _
+                    ;; We don't have setuptools 68.
+                    (substitute* "setup.py"
+                                 (("68.0.0") "67.6.1"))
+                    (substitute* "setup.py"
+                                 (("0.19.0") "0.18.2")))))))
+   (propagated-inputs (list python-mkdocs-1-6-1
+                            python-pybtex
+                            python-pypandoc
+                            python-requests
+                            python-setuptools
+                            python-validators))
+   (home-page "https://github.com/shyamd/mkdocs-bibtex/")
+   (synopsis "An MkDocs plugin that enables managing citations with BibTex")
+   (description
+    "An @code{MkDocs} plugin that enables managing citations with @code{BibTex}.")
+   (license #f)))
+
+
+(define-public python-hatchling
+  (package
+   (name "python-hatchling")
+   (version "1.21.1")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "hatchling" version))
+     (sha256
+      (base32 "1g40g68vzfakddd9f0psp9jkfqy3v3la4zs5g127ski2792l195v"))))
+   (build-system pyproject-build-system)
+   (arguments
+    (list #:tests? #f                  ;to keep dependencies to a minimum
+          #:phases #~(modify-phases %standard-phases
+                                    (add-before 'build 'add-src-to-path
+                                                ;; Hatchling uses itself to build itself.
+                                                (lambda _
+                                                  (setenv "PYTHONPATH" "src"))))))
+   (propagated-inputs (list python-editables
+                            python-packaging
+                            python-pathspec
+                            python-pluggy
+                            python-tomli
+                            python-trove-classifiers))
+   (home-page "")
+   (synopsis "Modern, extensible Python build backend")
+   (description "Modern, extensible Python build backend")
+   (license #f)))
+
+
+(define-public python-hatch-nodejs-version
+  (package
+   (name "python-hatch-nodejs-version")
+   (version "0.3.2")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "hatch_nodejs_version" version))
+     (sha256
+      (base32 "0k5m2pg5ijdri5j88mhcj2vmg5ij1gy9n75hpfxm07mp2zc2hy4a"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-hatchling python-pytest))
+   (home-page "")
+   (synopsis "Hatch plugin for versioning from a package.json file")
+   (description "Hatch plugin for versioning from a package.json file")
+   (license #f)))
+
+(define-public python-paginate
+  (package
+   (name "python-paginate")
+   (version "0.5.6")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "paginate" version))
+     (sha256
+      (base32 "0bdgg269x4pihancwnwl39m7djgqv7yh93b4w6kpg09rm6v0fq2y"))))
+   (build-system pyproject-build-system)
+   (home-page "https://github.com/Signum/paginate")
+   (synopsis "Divides large result sets into pages for easier browsing")
+   (description "Divides large result sets into pages for easier browsing")
+   (license #f)))
+
+(define-public python-trove-classifiers
+  (package
+   (name "python-trove-classifiers")
+   (version "2024.3.3")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "trove-classifiers" version))
+     (sha256
+      (base32 "1p1zcxwzvh1sv0v6a28ybc91vs40n4q876986rrnpy3zqvwxyznz"))))
+   (build-system pyproject-build-system)
+   (arguments (list #:build-backend "setuptools.build_meta"
+                    #:tests? #f))      ;keep dependencies to a minimum
+   (native-inputs (list python-wheel))
+   (home-page "https://github.com/pypa/trove-classifiers")
+   (synopsis "Canonical source for classifiers on PyPI (pypi.org).")
+   (description "Canonical source for classifiers on @code{PyPI} (pypi.org).")
+   (license #f)))
+
+(define-public python-mkdocs-material-extensions
+  (package
+   (name "python-mkdocs-material-extensions")
+   (version "1.3.1")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "mkdocs_material_extensions" version))
+     (sha256
+      (base32 "0hw4jaqwlj5vn9ghwb3v3w79fayicyj5h0wngwjnixc8x8f53j8h"))))
+   (build-system pyproject-build-system)
+   (arguments (list #:tests? #f)) ;keep dependencies to a minimum
+   (propagated-inputs (list python-hatchling
+                            python-pytest
+                            python-markdown-3-5-2
+                            python-pytest-cov
+                            python-coverage
+                            python-beautifulsoup4
+                            ))
+   (home-page "")
+   (synopsis "Extension pack for Python Markdown and MkDocs Material.")
+   (description
+    "Extension pack for Python Markdown and @code{MkDocs} Material.")
+   (license #f)))
+
+(define-public python-pymdown-extensions-10-2
+  (package
+   (name "python-pymdown-extensions")
+   (version "10.7")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "pymdown_extensions" version))
+     (sha256
+      (base32 "1svd0dmmzpn1a49qx30a4my10cf9jm00ls9bdfggari5yrf4vmn0"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-markdown-3-5-2
+                            python-pygments-2-17-2
+                            python-pyyaml
+                            python-hatchling
+                            python-pytest))
+   (home-page "")
+   (synopsis "Extension pack for Python Markdown.")
+   (description "Extension pack for Python Markdown.")
+   (license #f)))
+
+(define-public python-pygments-2-17-2
+  (package
+   (name "python-pygments")
+   (version "2.17.2")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "pygments" version))
+     (sha256
+      (base32 "0ry3qi4rszkiqb20bmjlzys71dja9i746kvqi8xbxr9dzp4wwins"))))
+   (build-system pyproject-build-system)
+   (arguments (list #:tests? #f))
+   (propagated-inputs (list python-hatchling))
+   (home-page "")
+   (synopsis "Pygments is a syntax highlighting package written in Python.")
+   (description
+    "Pygments is a syntax highlighting package written in Python.")
+   (license #f)))
+
+(define-public python-mkdocs-1-6-1
+  (package
+   (name "python-mkdocs")
+   (version "1.6.1")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "mkdocs" version))
+     (sha256
+      (base32 "1wl6xwidij0ygjznmpavcqv23y995wl5g75k78sq9h18v40jyhvv" ))))
+   (build-system pyproject-build-system)
+   (arguments (list #:tests? #f))
+   (propagated-inputs (list python-click
+                            python-colorama
+                            python-ghp-import
+                            python-importlib-metadata
+                            python-jinja2
+                            python-markdown-3-5-2
+                            python-hatchling
+                            python-markupsafe
+                            python-mergedeep
+                            python-babel
+                            python-packaging
+                            python-pathspec
+                            python-platformdirs
+                            python-pytest
+                            python-mkdocs-get-deps
+                            python-coverage
+                            python-pytest-cov
+                            python-pyyaml
+                            python-pyyaml-env-tag
+                            python-typing-extensions
+                            python-watchdog))
+   (home-page "")
+   (synopsis "Project documentation with Markdown.")
+   (description "Project documentation with Markdown.")
+   (license #f)))
+
+(define-public python-markdown-3-5-2
+  (package
+   (name "python-markdown")
+   (version "3.5.2")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "Markdown" version))
+     (sha256
+      (base32 "1y1fvzaayk966rmf448vkzj65w02h0b1s7770bk81vjhqlyppb71"))))
+   (build-system pyproject-build-system)
+   (arguments (list #:tests? #f))
+   (propagated-inputs (list python-importlib-metadata))
+   (native-inputs (list python-pytest python-coverage python-pyyaml))
+   (home-page "")
+   (synopsis "Python implementation of John Gruber's Markdown.")
+   (description "Python implementation of John Gruber's Markdown.")
+   (license #f)))
+
+(define-public python-regex-2023
+  (package
+   (name "python-regex")
+   (version "2023.10.3")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "regex" version))
+     (sha256
+      (base32 "03yci2hs7mnzhn2798hh7zvkv7pcgv0wxpbsll5yx4129n24zvrz"))))
+   (build-system pyproject-build-system)
+   (home-page "https://github.com/mrabarnett/mrab-regex")
+   (synopsis "Alternative regular expression module, to replace re.")
+   (description "Alternative regular expression module, to replace re.")
+   (license #f)))
+
+
+(define-public python-pyproject-parser
+  (package
+   (name "python-pyproject-parser")
+   (version "0.9.1")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "pyproject-parser" version))
+     (sha256
+      (base32 "16zxd450081ywb1dj69zd6mz7xykcvxamq80inq8hmy9igvjy2zs"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-apeye-core
+                            python-attrs
+                            python-dom-toml
+                            python-domdf-python-tools
+                            python-natsort
+                            python-packaging
+                            python-shippinglabel
+                            python-toml
+                            python-tomli
+                            python-typing-extensions))
+   (home-page "https://github.com/repo-helper/pyproject-parser")
+   (synopsis "Parser for 'pyproject.toml'")
+   (description "Parser for pyproject.toml")
+   (license #f)))
+
+
+(define-public python-mistletoe
+  (package
+   (name "python-mistletoe")
+   (version "1.3.0")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "mistletoe" version))
+     (sha256
+      (base32 "1sfv79fway4iya9i3rmz1bkj12lhzgazd4n7kv8phi4vvn57h3mx"))))
+   (build-system pyproject-build-system)
+   (home-page "https://github.com/miyuchina/mistletoe")
+   (synopsis "A fast, extensible Markdown parser in pure Python.")
+   (description
+    "This package provides a fast, extensible Markdown parser in pure Python.")
+   (license #f)))
+
+
+(define-public python-deprecation-alias
+  (package
+   (name "python-deprecation-alias")
+   (version "0.3.2")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "deprecation-alias" version))
+     (sha256
+      (base32 "0xnf2cq7alaylkm4ji8w94bj48skdgazk97730d6l9qavmfim7hw"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-deprecation python-packaging))
+   (home-page "https://github.com/domdfcoding/deprecation-alias")
+   (synopsis
+    "A wrapper around 'deprecation' providing support for deprecated aliases.")
+   (description
+    "This package provides a wrapper around deprecation providing support for
+deprecated aliases.")
+   (license #f)))
+
+
+
+(define-public python-apeye
+  (package
+   (name "python-apeye")
+   (version "1.4.1")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "apeye" version))
+     (sha256
+      (base32 "0dkasx9q9mkmmcalry2bxq5fj22998srl652ppykp7k8mlpm9shl"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-apeye-core
+                            python-cachecontrol
+                            python-domdf-python-tools
+                            python-lockfile
+                            python-platformdirs
+                            python-requests))
+   (home-page "")
+   (synopsis "Handy tools for working with URLs and APIs.")
+   (description "Handy tools for working with URLs and APIs.")
+   (license #f)))
+
+(define-public python-shippinglabel
+  (package
+   (name "python-shippinglabel")
+   (version "1.7.1")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "shippinglabel" version))
+     (sha256
+      (base32 "1vh47qsj37zha5d8vnywhw0zfinjsgya4i49qcigxidlnahm93fg"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-apeye
+                            python-deprecation-alias
+                            python-dom-toml
+                            python-domdf-python-tools
+                            python-packaging
+                            python-platformdirs
+                            python-typing-extensions))
+   (home-page "https://github.com/domdfcoding/shippinglabel")
+   (synopsis "Utilities for handling packages.")
+   (description "Utilities for handling packages.")
+   (license #f)))
+
+(define-public python-apeye-core
+  (package
+   (name "python-apeye-core")
+   (version "1.1.5")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "apeye_core" version))
+     (sha256
+      (base32 "0mca4dg5i9b2q65kd99kxc08bvzmp1x4pramx87v5j8cs39jxrsx"))))
+   (build-system pyproject-build-system)
+   (inputs (list python-domdf-python-tools
+                 python-idna
+                 python-hatchling
+                 python-hatch-requirements-txt
+                 ))
+   (home-page "")
+   (synopsis "Core (offline) functionality for the apeye library.")
+   (description "Core (offline) functionality for the apeye library.")
+   (license #f)))
+
+(define-public python-dom-toml
+  (package
+   (name "python-dom-toml")
+   (version "0.6.1")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "dom_toml" version))
+     (sha256
+      (base32 "0s1860pkpkh6f8h5bh6339s20fwa21bcwvajdv9jxirjmq2c5gx0"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-domdf-python-tools python-toml))
+   (home-page "")
+   (synopsis "Dom's tools for Tom's Obvious, Minimal Language.")
+   (description "Dom's tools for Tom's Obvious, Minimal Language.")
+   (license #f)))
+
+
+(define-public python-consolekit
+  (package
+   (name "python-consolekit")
+   (version "1.6.0")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "consolekit" version))
+     (sha256
+      (base32 "1nbdz7q4abkrnkl40a7zvx87k9vssdpf92qfsybf4jpyn8icwzhy"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-click
+                            python-colorama
+                            python-deprecation-alias
+                            python-domdf-python-tools
+                            python-mistletoe
+                            python-psutil
+                            python-pytest
+                            python-pytest-regressions
+                            python-typing-extensions))
+   (home-page "")
+   (synopsis "Additional utilities for click.")
+   (description "Additional utilities for click.")
+   (license #f)))
+
+
+(define-public python-whey
+  (package
+   (name "python-whey")
+   (version "0.0.24")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "whey" version))
+     (sha256
+      (base32 "18laavdk1d1mm91gj51n18pnh2y2iph992416fbj7am8bbc0a6a1"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-click
+                            python-consolekit
+                            python-dist-meta
+                            python-dom-toml
+                            python-domdf-python-tools
+                            python-handy-archives
+                            python-natsort
+                            python-packaging
+                            python-pyproject-parser
+                            python-shippinglabel))
+   (home-page "https://github.com/repo-helper/whey")
+   (synopsis "A simple Python wheel builder for simple projects.")
+   (description
+    "This package provides a simple Python wheel builder for simple projects.")
+   (license #f)))
+
+(define-public python-handy-archives
+  (package
+   (name "python-handy-archives")
+   (version "0.2.0")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "handy_archives" version))
+     (sha256
+      (base32 "1xmk7vkxqr3dg1kj03bgd1896sz0m8d2c8r8nzixaacyzl0i38pv"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-coincidence python-pytest))
+   (home-page "")
+   (synopsis "Some handy archive helpers for Python.")
+   (description "Some handy archive helpers for Python.")
+   (license #f)))
+
+(define-public python-dist-meta
+  (package
+   (name "python-dist-meta")
+   (version "0.8.0")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "dist-meta" version))
+     (sha256
+      (base32 "0lc52gs7bkaggid44bj4r7dkxgxls0933cnpv200qn3zbgvm27al"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-domdf-python-tools python-handy-archives
+                            python-packaging))
+   (home-page "https://github.com/repo-helper/dist-meta")
+   (synopsis "Parse and create Python distribution metadata.")
+   (description "Parse and create Python distribution metadata.")
+   (license #f)))
+
+
+(define-public python-coincidence
+  (package
+   (name "python-coincidence")
+   (version "0.6.5")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "coincidence" version))
+     (sha256
+      (base32 "0i7y0q6f2vca0p0k5gmi7xbcs4ip898rvifyia1kgli3bmk12r8d"))))
+   (build-system pyproject-build-system)
+                                        ;    (arguments (list #:tests? #false))
+   (propagated-inputs (list python-domdf-python-tools python-pytest
+                            python-pytest-regressions
+                            python-typing-extensions))
+   (home-page "https://github.com/python-coincidence/coincidence")
+   (synopsis "Helper functions for pytest.")
+   (description "Helper functions for pytest.")
+   (license #f)))
+
+
+(define-public python-domdf-python-tools
+  (package
+   (name "python-domdf-python-tools")
+   (version "3.8.0.post2")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "domdf_python_tools" version))
+     (sha256
+      (base32 "0sinlf5fw1y31fc7s8l98cq640inknijsba6vq47nxlzl9g2bzd1"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-importlib-metadata
+                            python-importlib-resources python-natsort
+                            python-typing-extensions))
+   (home-page "https://github.com/domdfcoding_python_tools")
+   (synopsis "Plugin for ")
+   (description "" )
+   (license #f)))
+
+
+(define-public python-coverage-pyver-pragma
+  (package
+   (name "python-coverage-pyver-pragma")
+   (version "0.3.2")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "coverage_pyver_pragma" version))
+     (sha256
+      (base32 "053hwps5i27bz1v691n8qybrlcqx000xvwx8l3c592qnqvdgbqf5"))))
+   (build-system pyproject-build-system)
+   (propagated-inputs (list python-coverage python-domdf-python-tools python-whey
+                            python-packaging python-pyparsing))
+   (home-page "https://github.com/python-coincidence/coverage_pyver_pragma")
+   (synopsis
+    "Plugin for Coverage.py to selectively ignore branches depending on the Python version.")
+   (description
+    "Plugin for Coverage.py to selectively ignore branches depending on the Python
+version.")
+   (license #f)))
+
+
+(define-public python-hatch-requirements-txt
+  (package
+   (name "python-hatch-requirements-txt")
+   (version "0.4.1")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "hatch_requirements_txt" version))
+     (sha256
+      (base32 "083xakilrmy0ymh34s9wm8x8s7s8vn7ij33xz9avn1gxb1bnws1c"))))
+   (build-system pyproject-build-system)
+   (arguments (list #:tests? #false)) ;the tests are not run automatically
+   (propagated-inputs (list python-hatchling
+                            python-packaging
+                            python-pytest
+                            python-pkginfo
+                            python-importlib-metadata
+                                        ;python-coverage-pyver-pragma
+                                        ;python-coverage
+                            python-domdf-python-tools
+                            python-pytest-cov
+                            python-pytest-randomly
+                            python-pytest-timeout))
+   (home-page "")
+   (synopsis
+    "Hatchling plugin to read project dependencies from requirements.txt")
+   (description
+    "Hatchling plugin to read project dependencies from requirements.txt")
+   (license #f)))
+
+(define* (custom-pypi-uri name version #:optional (extension ".tar.gz"))
+  "Return a URI string for the Python package hosted on the Python Package
+Index (PyPI) corresponding to NAME and VERSION.  EXTENSION is the file name
+extension, such as '.tar.gz'."
+  (string-append "https://pypi.io/packages/source/"
+                 (string-take name 1) "/" name "/"
+                 name "-" version extension))
+
+(define-public python-mkdocs-get-deps
+  (package
+   (name "python-mkdocs-get-deps")
+   (version "0.2.0")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "mkdocs_get_deps" version))
+     (sha256
+      (base32 "0366c4qgp447qs565shx9f764ld6b0a9rjzxmccrpbbzkh93saqn"))))
+   (build-system pyproject-build-system)
+   (arguments (list #:tests? #f))
+   (propagated-inputs (list python-importlib-metadata python-mergedeep
+                            python-platformdirs python-hatchling python-pyyaml))
+   (home-page "")
+   (synopsis
+    "MkDocs extension that lists all dependencies according to a mkdocs.yml file")
+   (description
+    "@code{MkDocs} extension that lists all dependencies according to a mkdocs.yml
+file.")
+   (license #f)))
+
+(define-public python-mkdocs-material
+  (package
+   (name "python-mkdocs-material")
+   (version "9.5.36")
+   (source
+    (origin
+     (method git-fetch)
+     (uri (git-reference (url "https://${TOKEN_GH}@github.com/squidfunk/mkdocs-material-insiders.git")
+                         (commit "9.5.36-insiders-4.53.13")))
+     (file-name (git-file-name name version))
+     (sha256
+      (base32 "0l1k0m5r8n5i9sa7n1slm752sd4w7rg3pd9w9l5xrd25zd6vfswf"))))
+   (build-system pyproject-build-system)
+   (arguments (list #:tests? #f))
+   (propagated-inputs (list python-trove-classifiers
+                            python-babel
+                            python-colorama
+                            python-jinja2
+                            python-markdown-3-5-2
+                            python-mkdocs-1-6-1
+                            python-hatchling
+                            python-hatch-nodejs-version
+                            python-hatch-requirements-txt
+                            python-mkdocs-material-extensions
+                            python-paginate
+                            python-regex-2023
+                            python-pygments-2-17-2
+                            python-pymdown-extensions-10-2
+                            python-requests))
+   (home-page "")
+   (synopsis "Documentation that simply works")
+   (description "Documentation that simply works")
+   (license #f)))
+
+(define-public python-mkdocs-static-i18n
+  (package
+   (name "python-mkdocs-static-i18n")
+   (version "1.2.3")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "mkdocs_static_i18n" version))
+     (sha256
+      (base32 "056977cfhi7ppm4m5f0wpcnvi77gdzzynqyqkk20wmr9vnk4vkvw"))))
+   (build-system pyproject-build-system)
+   (arguments (list #:tests? #f))
+   (propagated-inputs (list python-mkdocs-1-6-1))
+   (home-page "")
+   (synopsis "MkDocs i18n plugin using static translation markdown files")
+   (description
+    "@code{MkDocs} i18n plugin using static translation markdown files.")
+   (license #f)))
+
+(define-public python-mkdocs-git-authors-plugin
+  (package
+   (name "python-mkdocs-git-authors-plugin")
+   (version "0.9.0")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "mkdocs_git_authors_plugin" version))
+     (sha256
+      (base32 "1b4yxff910p4gwbcraf3624pagiwwhiirl4sinj82i06hwxzcqb1"))))
+   (build-system pyproject-build-system)
+   (arguments (list #:tests? #false))
+   (propagated-inputs (list python-mkdocs-1-6-1))
+   (home-page "https://github.com/timvink/mkdocs-git-authors-plugin")
+   (synopsis "Mkdocs plugin to display git authors of a page")
+   (description "Mkdocs plugin to display git authors of a page.")
+   (license #f)))
+
+(define-public python-mkdocs-gen-files
+  (package
+   (name "python-mkdocs-gen-files")
+   (version "0.5.0")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "mkdocs_gen_files" version))
+     (sha256
+      (base32 "1g0r9pzx8msjmzlrnff2k2a1mz2pw4sx1cgni2kn4w6nnmbg4z2c"))))
+   (build-system pyproject-build-system)
+   (arguments (list #:tests? #false))
+   (propagated-inputs (list python-mkdocs-1-6-1))
+   (home-page "")
+   (synopsis
+    "MkDocs plugin to programmatically generate documentation pages during the build")
+   (description
+    "@code{MkDocs} plugin to programmatically generate documentation pages during the
+build.")
+   (license #f)))
+
+(define-public python-mkdocs-git-revision-date-localized-plugin
+  (package
+   (name "python-mkdocs-git-revision-date-localized-plugin")
+   (version "1.2.9")
+   (source
+    (origin
+     (method url-fetch)
+     (uri (pypi-uri "mkdocs_git_revision_date_localized_plugin" version))
+     (sha256
+      (base32 "0rcg7k9yiw8f53ikyi62yq7fk2fmaf65z213j7744fms7y3m16nz"))))
+   (build-system pyproject-build-system)
+   (arguments (list #:tests? #false))
+   (propagated-inputs (list python-babel python-gitpython python-mkdocs-1-6-1
+                            python-pytz))
+   (native-inputs (list python-click
+                        python-codecov
+                        python-mkdocs-gen-files
+                        python-mkdocs-git-authors-plugin
+                        python-mkdocs-material
+                        python-mkdocs-static-i18n
+                        python-pytest
+                        python-pytest-cov))
+   (home-page "")
+   (synopsis
+    "Mkdocs plugin that enables displaying the localized date of the last git modification of a markdown file.")
+   (description
+    "Mkdocs plugin that enables displaying the localized date of the last git
+modification of a markdown file.")
+   (license #f)))
+
+
+
+;; (packages->manifest
+;;  (list python-pip python-mkdocs-1-6-1 python-mkdocs-material python-mkdocs-git-revision-date-localized-plugin python-mkdocs-bibtex git))
